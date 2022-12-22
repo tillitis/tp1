@@ -56,12 +56,23 @@
         }
       ],
       "drc_exclusions": [
-        "courtyards_overlap|145969999|109868472|999751fc-78d3-4f80-b9fe-ca01ec165983|a869634c-e59e-4af3-8889-a0a089864e56",
-        "malformed_courtyard|124600000|134900000|999751fc-78d3-4f80-b9fe-ca01ec165983|00000000-0000-0000-0000-000000000000",
         "malformed_courtyard|129500000|49000000|90b5a430-ba57-43ad-a0e2-496170af0c4f|00000000-0000-0000-0000-000000000000",
-        "malformed_courtyard|148600000|106100000|999751fc-78d3-4f80-b9fe-ca01ec165983|00000000-0000-0000-0000-000000000000",
-        "malformed_courtyard|150700000|106100000|999751fc-78d3-4f80-b9fe-ca01ec165983|00000000-0000-0000-0000-000000000000",
-        "malformed_courtyard|151500000|101000000|90b5a430-ba57-43ad-a0e2-496170af0c4f|00000000-0000-0000-0000-000000000000"
+        "malformed_courtyard|151500000|101000000|90b5a430-ba57-43ad-a0e2-496170af0c4f|00000000-0000-0000-0000-000000000000",
+        "silk_over_copper|129517731|118230801|03cd9e72-64ed-4b6c-ba73-58ce597749fc|70341d2a-7d4a-4e85-828f-6f0009865ad8",
+        "silk_over_copper|131470096|118818179|03cd9e72-64ed-4b6c-ba73-58ce597749fc|70341d2a-7d4a-4e85-828f-6f0009865ad8",
+        "silk_over_copper|133000000|107570000|a0af37c1-9d94-4222-8d98-681c02a0f0e9|f05ba679-d23d-42b7-b001-03eb17c3bfb7",
+        "silk_over_copper|133000000|109570000|a0af37c1-9d94-4222-8d98-681c02a0f0e9|a280521c-c74b-4ecf-b9b4-213ba488c164",
+        "silk_over_copper|133000000|111570000|a0af37c1-9d94-4222-8d98-681c02a0f0e9|88ffbfb3-9878-483c-a550-aedc0a450e53",
+        "silk_over_copper|133000000|113570000|a0af37c1-9d94-4222-8d98-681c02a0f0e9|9c8b2f50-a3a6-4549-ab6a-bdef1068f086",
+        "silk_over_copper|133000000|115570000|a0af37c1-9d94-4222-8d98-681c02a0f0e9|f4f8a9fe-a440-43ec-b602-e6d151d14e34",
+        "silk_over_copper|133000000|117570000|a0af37c1-9d94-4222-8d98-681c02a0f0e9|2d43bc39-9b46-44ea-a11b-604cd85edb13",
+        "silk_over_copper|133000000|119570000|a0af37c1-9d94-4222-8d98-681c02a0f0e9|0efb60ab-968b-448c-bc7e-1a6ed5f5c35a",
+        "silk_over_copper|146880000|130930000|3b78f07d-b588-4f2a-b13d-6203a4505860|b8adbe77-8454-4855-9054-7713fdf3190a",
+        "silk_over_copper|146880000|132930000|3b78f07d-b588-4f2a-b13d-6203a4505860|5bfbfc49-7111-4b81-9ca8-3bd4ef9e5a8e",
+        "silk_over_copper|146900000|130930000|3b78f07d-b588-4f2a-b13d-6203a4505860|b8adbe77-8454-4855-9054-7713fdf3190a",
+        "silk_over_copper|150734199|109577156|43adeeda-45a9-49c0-9f1f-746f14391161|b2bf71ba-8702-49f6-9f79-f53c7401c9c8",
+        "silk_over_copper|151452581|129825000|6853a500-96d2-454b-9700-96a6e895d44c|aa6a93a9-29cd-4f09-b721-64a6aa5605f0",
+        "silk_over_copper|151650369|110527421|43adeeda-45a9-49c0-9f1f-746f14391161|b2bf71ba-8702-49f6-9f79-f53c7401c9c8"
       ],
       "meta": {
         "version": 2
@@ -93,7 +104,7 @@
         "pth_inside_courtyard": "ignore",
         "shorting_items": "error",
         "silk_over_copper": "warning",
-        "silk_overlap": "warning",
+        "silk_overlap": "ignore",
         "skew_out_of_range": "error",
         "through_hole_pad_without_hole": "error",
         "too_many_vias": "error",
@@ -354,7 +365,7 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "mta1-usb-v1-programmer.kicad_pro",
+    "filename": "tp1.kicad_pro",
     "version": 1
   },
   "net_settings": {
@@ -411,7 +422,7 @@
       "idf": "",
       "netlist": "",
       "specctra_dsn": "",
-      "step": "mta1-usb-v1-programmer.step",
+      "step": "tp1.step",
       "vrml": ""
     },
     "page_layout_descr_file": ""
@@ -447,7 +458,7 @@
       "model_mode": 0,
       "workbook_filename": ""
     },
-    "page_layout_descr_file": "..\\mta1-library\\CERN_OHL_S_drawing_sheet.kicad_wks",
+    "page_layout_descr_file": "C:\\Users\\matt\\Other-Repos\\tillitis-key1\\hw\\boards\\mta1-library\\CERN_OHL_S_drawing_sheet.kicad_wks",
     "plot_directory": "",
     "spice_adjust_passive_values": false,
     "spice_external_command": "spice \"%I\"",
