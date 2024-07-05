@@ -1,0 +1,327 @@
+# README and further info at https://github.com/INTI-CMNB/KiBot
+
+# Test it locally by:
+#
+# docker pull setsoft/kicad_auto:dev_k6 # (or whateever docker image is specified in .gitlab-ci.yml)
+# docker run -it -v `pwd`:/build -w /build setsoft/kicad_auto:dev_k6 "kibot -v -b *.kicad_pcb -c config.kibot.yaml"
+
+kibot:
+  version: 1
+
+global:
+  out_dir: "output"
+
+preflight:
+  # [boolean=false] Zones are filled before doing any operation involving PCB layers.
+  check_zone_fills: true
+  # [boolean=false] Option for `run_erc`. ERC warnings are considered errors.
+  erc_warnings: true
+  # [boolean=false] Option for `run_drc`. Ignores the unconnected nets. Useful if you didn't finish the routing.
+  ignore_unconnected: false
+  # [list(dict)] A list of entries to filter out ERC/DRC messages.
+  # Note that ignored errors will become KiBot warnings (i.e. (W058) ...).
+  # To farther ignore these warnings use the filters option in the global section.
+  filters:
+    - filter: 'Silkscreen clipped by solder mask'
+      error: 'silk_over_copper'
+      regex: '.*Silkscreen clipped by solder mask.*'
+  # [boolean=false] Runs the DRC (Distance Rules Check). To ensure we have a valid PCB.
+  # The report file name is controlled by the global output pattern (%i=drc %x=txt).
+  run_drc: true
+  # [boolean=false] Runs the ERC (Electrical Rules Check). To ensure the schematic is electrically correct.
+  # The report file name is controlled by the global output pattern (%i=erc %x=txt).
+  run_erc: true
+  # [boolean=false] Update the XML version of the BoM (Bill of Materials).
+  # To ensure our generated BoM is up to date.
+  # Note that this isn't needed when using the internal BoM generator (`bom`).
+  update_xml: true
+  pcb_replace:
+    date_command: "echo $(git tag --points-at HEAD)-$(git log -1 --pretty=format:%h)-$(date '+%F')"
+outputs:
+
+  # Excellon drill format:
+  # You can create a map file for documentation purposes.
+  # This output is what you get from the 'File/Fabrication output/Drill Files' menu in pcbnew.
+  - name: 'excellon_example'
+    comment: 'This is the main format for the drilling machine.'
+    type: 'excellon'
+    dir: 'pcb-mfg'
+    options:
+      # [dict|string] [hpgl,ps,gerber,dxf,svg,pdf] Format for a graphical drill map.
+      # Not generated unless a format is specified
+      map:
+        # [string='%f-%i%v.%x'] Name for the map file, KiCad defaults if empty (%i='PTH_drill_map'). Affected by global options
+        output: '%f-%i%v.%x'
+        # [string='pdf'] [hpgl,ps,gerber,dxf,svg,pdf] Format for a graphical drill map
+        type: 'pdf'
+      # [boolean=false] Use a minimal header in the file
+      minimal_header: true
+      # [boolean=true] Generate one file for both, plated holes and non-plated holes, instead of two separated files
+      pth_and_npth_single_file: false
+      # [dict|string] Name of the drill report. Not generated unless a name is specified
+
+  # Gerber format:
+  # This output is what you get from the File/Plot menu in pcbnew.
+  - name: 'gerber_example'
+    comment: 'This is the main fabrication format for the PCB.'
+    type: 'gerber'
+    dir: 'pcb-mfg'
+    options:
+      # [boolean=true] Include the footprint values
+      plot_footprint_values: false
+      # [boolean=false] Substract the solder mask from the silk screen
+      subtract_mask_from_silk: true
+      # [boolean=true] Cover the vias
+      tent_vias: true
+      # [boolean=true] Use the extended X2 format (otherwise use X1 formerly RS-274X)
+      use_gerber_x2_attributes: true
+    layers:
+      - copper
+      - F.SilkS
+      - B.SilkS
+      - F.Mask
+      - B.Mask
+      - F.Paste
+      - B.Paste
+      - Edge.Cuts
+      - User.Comments
+
+  # IBoM (Interactive HTML BoM):
+  # For more information: https://github.com/INTI-CMNB/InteractiveHtmlBom
+  # This output is what you get from the InteractiveHtmlBom plug-in (pcbnew).
+  - name: 'ibom_example'
+    comment: 'Generates an interactive web page useful to identify the position of the components in the PCB.'
+    type: 'ibom'
+    dir: 'assembly'
+    options:
+      # [string=''] List of comma separated blacklisted components or prefixes with *. E.g. 'X1,MH*'.
+      # IBoM option, avoid using in conjunction with KiBot variants/filters
+      blacklist: ''
+      # [string=''] Name of the extra field that indicates do not populate status.
+      # Components with this field not empty will be blacklisted.
+      # IBoM option, avoid using in conjunction with KiBot variants/filters
+      dnp_field: 'Config'
+      # [boolean=false] Highlight pin1 by default
+      highlight_pin1: true
+      # [string='%f-%i%v.%x'] Filename for the output, use '' to use the IBoM filename (%i=ibom, %x=html). Affected by global options
+      output: ''
+
+
+  # Generate a BOM with similar settings as with Kibom
+  - name: 'bom_xlsx'
+    comment: "Bill of Materials in Excel format"
+    type: bom
+    dir: 'assembly'
+    options:
+      format: XLSX
+      output: '%f-%bd_%i.%x'
+      # Fields for sorting indiviudal components into groups
+      group_fields:
+        - Part
+        - Part lib
+        - Footprint
+        - Footprint lib
+        - Component
+        - Value
+        - Rating
+        - Package
+        - Manufacturer
+        - Manufacturer part number
+        - Supplier
+        - Supplier part number
+        - LCSC
+      merge_blank_fields: false
+      # Columns to be included in BoM
+      columns:
+        - References
+        - Component
+        - Value
+        - Rating
+        - Package
+        - Manufacturer
+        - Manufacturer part number
+        - Supplier
+        - Supplier part number
+        - Quantity Per PCB
+        - Or equivalent
+      xlsx:
+        title: ''
+        logo: false
+        col_colors: false
+        hide_pcb_info: true
+        hide_stats_info: true
+        generate_dnf: false
+
+  # PDF Schematic Print (Portable Document Format):
+  # This is the main format to document your schematic.
+  # This output is what you get from the 'File/Print' menu in eeschema.
+  - name: 'pdf_sch_print_example'
+    comment: 'Exports the PCB to the most common exhange format. Suitable for printing.'
+    type: 'pdf_sch_print'
+    dir: '.'
+
+
+  - name: 'assembly_drawing_top'
+    comment: "Make a top side assembly drawing"
+    type: pcb_print
+    dir: assembly
+    options:
+      title: Assembly drawing - top side
+      output: 'assembly_drawing_top.pdf'
+      plot_sheet_reference: false
+      format: 'PDF'
+      keep_temporal_files: false
+      realistic_solder_mask: false
+      pages:
+        - scaling: 2.0
+          #mirror: true
+          layers:
+            - layer: Edge.Cuts
+              color: '#000000'
+            - layer: F.Mask
+              color: '#dfdcd8'
+            - layer: F.Paste
+              color: '#939393'
+            - layer: F.SilkS
+              color: '#176f67'
+              plot_footprint_refs: false
+            - layer: F.Fab
+              color: '#0f0f0f'
+              plot_footprint_refs: true
+              plot_footprint_values: false
+            - layer: Dwgs.User
+
+  - name: 'assembly_drawing_bottom'
+    comment: "Make a bottom side assembly drawing"
+    type: pcb_print
+    dir: assembly
+    options:
+      title: Assembly drawing - bottom side
+      output: 'assembly_drawing_bottom.pdf'
+      plot_sheet_reference: false
+      format: 'PDF'
+      keep_temporal_files: false
+      realistic_solder_mask: false
+      pages:
+        - scaling: 2.0
+          mirror: true
+          layers:
+            - layer: Edge.Cuts
+              color: '#000000'
+            - layer: B.Mask
+              color: '#dfdcd8'
+            - layer: B.Paste
+              color: '#939393'
+            - layer: B.SilkS
+              color: '#176f67'
+              plot_footprint_refs: false
+            - layer: B.Fab
+              color: '#0f0f0f'
+              plot_footprint_refs: true
+              plot_footprint_values: false
+
+  # Pick & place:
+  # This output is what you get from the 'File/Fabrication output/Footprint poistion (.pos) file' menu in pcbnew.
+  - name: 'position_example'
+    comment: 'Generates the file with position information for the PCB components, used by the pick and place machine.'
+    type: 'position'
+    dir: 'assembly'
+    options:
+      format: CSV
+      only_smd: false
+      dnf_filter: _kibom_dnf
+      separate_files_for_front_and_back: false
+      columns:
+        - id: Ref
+          name: "Reference Designator"
+        - id: PosX
+          name: "Center X"
+        - id: PosY
+          name: "Center Y"
+        - id: Rot
+          name: "Rotation"
+        - Side
+        - Val
+        - Package
+
+  # STEP file
+  - name: Step
+    comment: "Generate 3D model (STEP)"
+    type: step
+    dir: 3d
+    options:
+      metric_units: true
+      origin: drill        # "grid" or "drill" o "X,Y" i.e. 3.2,-10
+
+  # 3D rendering
+  - name: 3D rendering
+    comment: "Render board 3D view"
+    type: render_3d
+    dir: 3d
+    options:
+      ray_tracing: true
+      rotate_x: 3
+      rotate_y: -2
+
+  # Archiver (files compressor):
+  # This is used to generate groups of files in compressed file format.
+  - name: 'compress_mfg'
+    comment: 'Generates a compressed file containing all manufacturing documents.'
+    type: 'compress'
+    dir: '..'
+    options:
+      # [string='auto'] [auto,stored,deflated,bzip2,lzma] Compression algorithm. Use auto to let KiBot select a suitable one
+      compression: 'auto'
+      # [list(dict)] Which files will be included
+      files:
+        # [string=''] Destination directory inside the archive, empty means the same of the file
+        - dest: 'assembly'
+          source: 'assembly/*'
+        - dest: 'documentation'
+          source: '../documentation/*'
+        - dest: 'assembly'
+          source: 'assembly-drawings/assembly-*.pdf'
+        - dest: 'pcb-mfg'
+          source: 'pcb-mfg/*'
+        - dest: '.'
+          source: '*.pdf'
+        - dest: 'reports'
+          source: '*-erc.txt'
+        - dest: 'reports'
+          source: '*-drc.txt'
+      # [string='ZIP'] [ZIP,TAR,RAR] Output file format
+      format: 'ZIP'
+      # [string='%f-%i%v.%x'] Name for the generated archive (%i=name of the output %x=according to format). Affected by global options
+      output: '%f-mfg-%bd.%x'
+
+  - name: 'compress_gerbers'
+    comment: 'Generates a compressed file containing PCB only manufacturing documents.'
+    type: 'compress'
+    dir: '..'
+    options:
+      # [list(dict)] Which files will be included
+      files:
+        # [string=''] Destination directory inside the archive, empty means the same of the file
+        - dest: '.'
+          source: 'pcb-mfg/*'
+      # [string='ZIP'] [ZIP,TAR,RAR] Output file format
+      format: 'ZIP'
+      # [string='%f-%i%v.%x'] Name for the generated archive (%i=name of the output %x=according to format). Affected by global options
+      output: '%f-gerbers-%bd.%x'
+
+  - name: 'compress_3D_models_and_renderings'
+    comment: 'Generates a compressed file containing PCB renderings and 3D model.'
+    type: 'compress'
+    dir: '..'
+    options:
+      # [list(dict)] Which files will be included
+      files:
+        # [string=''] Destination directory inside the archive, empty means the same of the file
+        - dest: '.'
+          source: '3d/*.step'
+        - dest: '.'
+          source: '3d/*.png'
+      # [string='ZIP'] [ZIP,TAR,RAR] Output file format
+      format: 'ZIP'
+      # [string='%f-%i%v.%x'] Name for the generated archive (%i=name of the output %x=according to format). Affected by global options
+      output: '%f-renderings-3d-%bd.%x'

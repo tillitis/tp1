@@ -1,0 +1,35 @@
+name: kibot-ci
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request: {}
+  # allow manual runs:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test and release
+        run: make run-kibot
+
+      - name: Archive logs if build failed
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: error-logs
+          path: "hw/*-mfg*.zip"
+
+      - name: Archive all manufacturing files
+        uses: actions/upload-artifact@v4
+        with:
+          name: manufacturing-files
+          path: |
+            hw/*-mfg*.zip
+            hw/*-gerbers*.zip
+            hw/*-renderings-3d*.zip
