@@ -1,0 +1,30 @@
+name: firmware-ci
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request: {}
+  # allow manual runs:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/tillitis/tkey-builder:4
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          # fetch-depth: 0
+          persist-credentials: false
+
+      - name: fix
+        # https://github.com/actions/runner-images/issues/6775
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: compile tp1 firmware
+        working-directory: fw/
+        run: ./build.sh
