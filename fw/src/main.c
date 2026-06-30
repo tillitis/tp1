@@ -23,7 +23,9 @@
  *
  */
 
+#include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <hardware/gpio.h>
@@ -57,6 +59,14 @@ static uint32_t blink_interval_ms = BLINK_NOT_MOUNTED;
 #define BULK_TRANSFER_MAX_SIZE 2048 // Maximum control transfer data length
 #define SPI_MAX_TRANSFER_SIZE (BULK_TRANSFER_MAX_SIZE-8)
 
+uint8_t bulk_buffer[BULK_TRANSFER_MAX_SIZE];
+
+uint8_t spi_in_buffer[SPI_MAX_TRANSFER_SIZE];   // Holds read values from last SPI transfer
+// Holds data for bulk transfer IN
+// uint8_t tx_buf[SPI_MAX_TRANSFER_SIZE] = {0};
+uint32_t tx_len = 0;
+bool tx_pending = false;
+
 
 pio_spi_inst_t spi = {
     .pio = pio0,
@@ -85,6 +95,17 @@ int main(void)
     while (1)
     {
         tud_task(); // tinyusb device task
+
+        if (tx_pending) {
+            if (tud_vendor_write_available()) {
+                uint32_t n = tud_vendor_write(spi_in_buffer, tx_len);
+
+                if (n == tx_len) {
+                    tud_vendor_n_flush(0);
+                    tx_pending = false;
+                }
+            }
+        }
         led_blinking_task();
 
         if(do_reset) {
@@ -261,8 +282,6 @@ static const uint8_t microsoft_os_compatible_id_desc[] = {
 uint8_t out_buffer[BULK_TRANSFER_MAX_SIZE]; // Host->Device data
 uint8_t in_buffer[BULK_TRANSFER_MAX_SIZE];  // Holds Device->Host data
 
-uint8_t spi_in_buffer[SPI_MAX_TRANSFER_SIZE];   // Holds read values from last SPI transfer
-
 // Invoked when a control transfer occurred on an interface of this class
 // Driver response accordingly to the request and the transfer stage (setup/data/ack)
 // return false to stall control endpoint (e.g unsupported request)
@@ -411,6 +430,98 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
 
     // stall unknown request
     return false;
+}
+
+static uint32_t received = 0;
+static uint8_t cmd = 0;
+static uint32_t expected_len = 0;
+
+static inline void reset_rx_state(void)
+{
+    received = 0;
+    cmd = 0;
+    expected_len = 0;
+}
+
+// Vendor bulk transfer OUT callback
+void tud_vendor_rx_cb(uint8_t itf)
+{
+     uint32_t count = tud_vendor_read(bulk_buffer + received, sizeof(bulk_buffer) - received);
+
+    if (count == 0) {
+        return;
+    }
+    received += count;
+
+    if (cmd == 0) {
+        cmd = bulk_buffer[0];
+    }
+
+    switch (cmd)
+    {
+    case COMMAND_SPI_XFER:
+        /* wait until we have full header */
+        if (received < 7) {
+            return;
+        }
+
+        if (expected_len == 0) {
+            expected_len = read_uint32(&bulk_buffer[3]) + 7;
+        }
+
+        break;
+
+    case COMMAND_PIN_VALUES:
+        expected_len = 9;
+        break;
+
+    default:
+        reset_rx_state();
+        return;
+    }
+
+    if (received < expected_len) {
+        return;
+    }
+
+    switch(cmd)
+    {
+    case COMMAND_SPI_XFER:
+        uint32_t len = read_uint32(&bulk_buffer[3]);
+
+        if (len > SPI_MAX_TRANSFER_SIZE) {
+            reset_rx_state();
+            return;
+        }
+        spi_xfer(
+            bulk_buffer[2],  // CS
+            len,
+            &bulk_buffer[7], // Data
+            spi_in_buffer
+        );
+
+        if (bulk_buffer[1] & 1) { // Expect a return
+            // memcpy(tx_buf, spi_in_buffer, len);
+            tx_len = len;
+            tx_pending = true;
+        }
+
+        reset_rx_state();
+
+        break;
+    case COMMAND_PIN_VALUES: // set pin values
+        gpio_put_masked(
+            read_uint32(&bulk_buffer[1]) & PIN_MASK,
+            read_uint32(&bulk_buffer[5]) & PIN_MASK);
+
+        reset_rx_state();
+
+        break;
+    default:
+        reset_rx_state();
+        break;
+
+    }
 }
 
 //--------------------------------------------------------------------+

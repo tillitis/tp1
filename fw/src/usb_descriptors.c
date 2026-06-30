@@ -37,7 +37,7 @@
 #define USB_PID   0x8886
 #define USB_BCD   0x0200
 
-#define PROTOCOL_VERSION 0x0200
+#define PROTOCOL_VERSION 0x0201
 
 //--------------------------------------------------------------------+
 // Device Descriptors
