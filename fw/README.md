@@ -75,7 +75,7 @@ difference.
 | Configure SPI pins and clock speed | OUT | 0x40 | 0 | 0 | 5 | NA |
 | Perform a SPI transfer | OUT | 0x41 | 0 | 0 | 5+n | 7+n |
 | Read data from previous SPI transfer | IN  | 0x41 | 0 | 0 | n | n |
-| Send SPI clocks        | OUT | 0x42 | 0 | 0 | 0 | NA |
+| Send SPI clocks        | OUT | 0x42 | 0 | 0 | 4 | 5 |
 | Read ADC inputs        | IN  | 0x50 | 0 | 0 | 12 | NA |
 | Enter bootloader mode  | OUT | 0xE0 | 0 | 0 | 0 | NA |
 
@@ -204,13 +204,13 @@ previous SPI transaction.
 
 This command supports both control and bulk transfer.
 
-Data packet format control transfer:
+Data packet format for control transfer:
 
 | Offset | Length | Description |
 | ---    | ---    | ---         |
 | 0x00   | 1-2040 | SPI data to transfer |
 
-Data packet format bulk transfer:
+Data packet format for bulk transfer:
 | Offset | Length | Description |
 | ---    | ---    | ---         |
 | 0x00   | 1-2040 | SPI data to transfer |
@@ -226,11 +226,20 @@ command in between the transfer and the read.
 This command is used to toggle the SPI clock pin, but doesn't transfer
 any data.
 
-Data packet format:
+This command supports both control and bulk transfer.
+
+Data packet format for control transfer:
 
 | Offset | Length | Description |
 | ---    | ---    | ---         |
-| 0x00   | 4 | Number of SPI bytes to clock |
+| 0x00   | 4      | Number of SPI bytes to clock |
+
+
+Data packet format for bulk transfer:
+| Offset | Length | Description |
+| ---    | ---    | ---         |
+| 0x00   | 1      | Requst code |
+| 0x01   | 4      | Number of SPI bytes to clock |
 
 ### Read ADCs
 

@@ -475,6 +475,10 @@ void tud_vendor_rx_cb(uint8_t itf)
         expected_len = 9;
         break;
 
+    case COMMAND_SPI_CLKOUT:
+        expected_len = 5;
+        break;
+
     default:
         reset_rx_state();
         return;
@@ -517,6 +521,19 @@ void tud_vendor_rx_cb(uint8_t itf)
         reset_rx_state();
 
         break;
+
+    case COMMAND_SPI_CLKOUT:
+        spi_xfer(
+            false,
+            read_uint32(&bulk_buffer[1]), // lenght
+            NULL,
+            spi_in_buffer
+            );
+
+        reset_rx_state();
+
+        break;
+
     default:
         reset_rx_state();
         break;
