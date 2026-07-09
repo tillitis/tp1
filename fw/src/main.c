@@ -374,7 +374,7 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
                 read_uint32(&out_buffer[8]) & PIN_MASK);
             return true;
             break;
-            
+
         case COMMAND_PIN_VALUES: // set pin values
             gpio_put_masked(
                 read_uint32(&out_buffer[0]) & PIN_MASK,
@@ -407,7 +407,7 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
                 &out_buffer[5], // data
                 spi_in_buffer
                 );
-            
+
             return true;
             break;
 
@@ -415,10 +415,10 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
             spi_xfer(
                 false,
                 read_uint32(&out_buffer[0]),
-                NULL,              
+                NULL,
                 spi_in_buffer
                 );
-            
+
             return true;
             break;
 
@@ -486,6 +486,10 @@ void tud_vendor_rx_cb(uint8_t itf)
         expected_len = 9;
         break;
 
+    case COMMAND_SPI_CLKOUT:
+        expected_len = 5;
+        break;
+
     default:
         reset_rx_state();
         return;
@@ -528,6 +532,19 @@ void tud_vendor_rx_cb(uint8_t itf)
         reset_rx_state();
 
         break;
+
+    case COMMAND_SPI_CLKOUT:
+        spi_xfer(
+            false,
+            read_uint32(&bulk_buffer[1]), // length
+            NULL,
+            spi_in_buffer
+            );
+
+        reset_rx_state();
+
+        break;
+
     default:
         reset_rx_state();
         break;
