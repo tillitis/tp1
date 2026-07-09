@@ -48,29 +48,36 @@ USB device descriptor. Known versions are:
 | --- | --- | --- |
 | 0x0100 | 1.0 | Raw USB test version |
 | 0x0200 | 2.0 | Release version |
+| 0x0201 | 2.1 | Support bulk transfer |
 
-The command set described in this document describes the version 2.0
+The command set described in this document describes the version 2.1
 format.
 
 ## Command set
 
-Commands are sent to the device as [control
-transfers](https://www-user.tu-chemnitz.de/~heha/hsn/chm/usb.chm/usb4.htm#Control).
-The bRequest field is used to select the commmand, and any
-configuration data associated with the command 
+Commands are sent to the device as control transfers, except for a few
+commands that in addition to control transfer also supports bulk
+transfer for increased throughput.
 
-| Command | Direction | bRequest | wValue | wIndex | wLength |
-| --- | ---  | --- | --- | --- | --- |
-| Set pin directions    | OUT | 0x30  | 0 | 0 | 8 |
-| Set pullups/pulldowns | OUT | 0x31  | 0 | 0 | 12 |
-| Set pin values         | OUT | 0x32 | 0 | 0 | 8 |
-| Get pin values         | IN  | 0x32 | 0 | 0 | 4 |
-| Configure SPI pins and clock speed | OUT | 0x40 | 0 | 0 | 5 |
-| Perform a SPI transfer | OUT | 0x41 | 0 | 0 | 5+n |
-| Read data from previous SPI transfer | IN  | 0x41 | 0 | 0 | n |
-| Send SPI clocks        | OUT | 0x42 | 0 | 0 | 0 |
-| Read ADC inputs        | IN  | 0x50 | 0 | 0 | 12 |
-| Enter bootloader mode  | OUT | 0xE0 | 0 | 0 | 0 |
+For control transfers the bRequest field is used to select the
+commmand, and any configuration data associated with the command.
+When using bulk transfer for a command the bRequest field does not
+exist. Instead the protocol puts the request code as the first byte in
+the data field. See each commmand below in order to see the
+difference.
+
+| Command | Direction | bRequest | wValue | wIndex | wLength | bulk wLength |
+| --- | ---  | --- | --- | --- | --- | --- |
+| Set pin directions    | OUT | 0x30  | 0 | 0 | 8 | NA |
+| Set pullups/pulldowns | OUT | 0x31  | 0 | 0 | 12 | NA |
+| Set pin values         | OUT | 0x32 | 0 | 0 | 8 | 9 |
+| Get pin values         | IN  | 0x32 | 0 | 0 | 4 | NA |
+| Configure SPI pins and clock speed | OUT | 0x40 | 0 | 0 | 5 | NA |
+| Perform a SPI transfer | OUT | 0x41 | 0 | 0 | 5+n | 7+n |
+| Read data from previous SPI transfer | IN  | 0x41 | 0 | 0 | n | n |
+| Send SPI clocks        | OUT | 0x42 | 0 | 0 | 4 | 5 |
+| Read ADC inputs        | IN  | 0x50 | 0 | 0 | 12 | NA |
+| Enter bootloader mode  | OUT | 0xE0 | 0 | 0 | 0 | NA |
 
 Additionally, the device supports an additional control transfer to
 support driver assignment on Windows:
@@ -114,12 +121,22 @@ is a mask of pins to update, and the second is a bitmap of new output
 values to apply. Any pin that has a bit set in the mask will be
 updated.
 
-Data packet format:
+This command supports both control and bulk transfer.
+
+Data packet format for control transfer:
 
 | Offset | Length | Description |
 | ---    | ---    | ---         |
 | 0x00   | 4      | uint32: Pin mask (1=set direction) |
 | 0x04   | 4      | uint32: Pin value (1=high, 0=low) |
+
+Data packet format for bulk transfer:
+
+| Offset | Length | Description |
+| ---    | ---    | ---         |
+| 0x00   | 4      | Request code |
+| 0x01   | 4      | uint32: Pin mask (1=set direction) |
+| 0x05   | 4      | uint32: Pin value (1=high, 0=low) |
 
 ### Read pin values
 
@@ -154,7 +171,9 @@ as the SPI interface. This command performs a full-duplex read/write
 operation, and stores the read data in a buffer. To retrieve the data
 read during this operation, issue a read command.
 
-Data packet format:
+This command supports both control and bulk transfer.
+
+Data packet format for control transfer:
 
 | Offset | Length | Description |
 | ---    | ---    | ---         |
@@ -162,27 +181,65 @@ Data packet format:
 | 0x01   | 4      | Bytes to transfer |
 | 0x05   | 1-2040 | SPI data to transfer |
 
+Data packet format for bulk transfer:
+
+| Offset | Length | Description |
+| ---    | ---    | ---         |
+| 0x00   | 1      | Requst code |
+| 0x01   | 1      | 0x00: No intent of doing a read. 0x01: intending to read, do a bulk IN transfer |
+| 0x02   | 1      | 0: don't toggle CS; any other value: toggle CS |
+| 0x03   | 4      | Bytes to transfer |
+| 0x07   | 1-2040 | SPI data to transfer |
+
+When using bulk transfer one has to signal the intent that one wants
+SPI data back in this command, so the IN endpoint can be prepared. If
+one wants the read data, one has to perorm a bulk IN transfer right
+after this command. It is not guaranted that the data is available if
+one do any other command in between the transfer and the read.
+
 ### Get data read during previous SPI transaction
 
 This command is used to retrieve any data transferred during the
 previous SPI transaction.
 
-Data packet format:
+This command supports both control and bulk transfer.
+
+Data packet format for control transfer:
 
 | Offset | Length | Description |
 | ---    | ---    | ---         |
 | 0x00   | 1-2040 | SPI data to transfer |
+
+Data packet format for bulk transfer:
+| Offset | Length | Description |
+| ---    | ---    | ---         |
+| 0x00   | 1-2040 | SPI data to transfer |
+
+Note that the request code is omitted here, the intent to read data
+back from a previous SPI transction is signaled with the second byte
+of the SPI transfer command (0x41). So one simply do a bulk transfer
+IN. It is not guaranted that the data is available if one do any other
+command in between the transfer and the read.
 
 ### SPI clock out
 
 This command is used to toggle the SPI clock pin, but doesn't transfer
 any data.
 
-Data packet format:
+This command supports both control and bulk transfer.
+
+Data packet format for control transfer:
 
 | Offset | Length | Description |
 | ---    | ---    | ---         |
-| 0x00   | 4 | Number of SPI bytes to clock |
+| 0x00   | 4      | Number of SPI bytes to clock |
+
+
+Data packet format for bulk transfer:
+| Offset | Length | Description |
+| ---    | ---    | ---         |
+| 0x00   | 1      | Requst code |
+| 0x01   | 4      | Number of SPI bytes to clock |
 
 ### Read ADCs
 
