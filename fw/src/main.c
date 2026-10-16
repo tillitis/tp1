@@ -271,16 +271,16 @@ typedef enum
 } command_t;
 
 static const uint8_t microsoft_os_compatible_id_desc[] = {
-	40, 0, 0, 0, // total length, 16 header + 24 function * 1
-	0, 1, // Version 1
-	4, 0, // Extended compatibility ID descriptor index
-	1, // Number of function sections
-	0, 0, 0, 0, 0, 0, 0, // Reserved
-	0, // Interface number
-	1, // Reserved
-	'W','I','N','U','S','B',0,0, // compatibleID
-	0,0,0,0,0,0,0,0,             // subCompatibleID
-	0,0,0,0,0,0 // Reserved
+    40, 0, 0, 0, // total length, 16 header + 24 function * 1
+    0, 1, // Version 1
+    4, 0, // Extended compatibility ID descriptor index
+    1, // Number of function sections
+    0, 0, 0, 0, 0, 0, 0, // Reserved
+    0, // Interface number
+    1, // Reserved
+    'W','I','N','U','S','B',0,0, // compatibleID
+    0,0,0,0,0,0,0,0,             // subCompatibleID
+    0,0,0,0,0,0 // Reserved
 };
 
 uint8_t out_buffer[BULK_TRANSFER_MAX_SIZE]; // Host->Device data
@@ -301,17 +301,17 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
 
         switch (request->bRequest)
         {
-	    case COMMAND_MS_OS_DESCRIPTOR:
-		// TODO: Check index
+        case COMMAND_MS_OS_DESCRIPTOR:
+        // TODO: Check index
             memcpy(in_buffer,
-			    microsoft_os_compatible_id_desc,
-			    sizeof(microsoft_os_compatible_id_desc)
-			    );
+                microsoft_os_compatible_id_desc,
+                sizeof(microsoft_os_compatible_id_desc)
+                );
             return tud_control_xfer(rhport,
-			    request,
-			    (void *)(uintptr_t)in_buffer,
-			    sizeof(microsoft_os_compatible_id_desc)
-			    );
+                request,
+                (void *)(uintptr_t)in_buffer,
+                sizeof(microsoft_os_compatible_id_desc)
+                );
             break;
 
         case COMMAND_PIN_VALUES:
@@ -347,7 +347,7 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
             return tud_control_xfer(rhport, request, (void *)(uintptr_t)out_buffer, sizeof(out_buffer));
             break;
 
-	case COMMAND_BOOTLOADER:
+    case COMMAND_BOOTLOADER:
             do_reset = true;
             return true;
             break;
@@ -383,8 +383,9 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
             break;
 
         case COMMAND_SPI_CONFIGURE:
-            if(out_buffer[4] == 0)
+            if(out_buffer[4] == 0) {
                 return false;
+            }
 
             pio_spi_init(spi.pio, spi.sm, pio_offset,
                          8,       // 8 bits per SPI frame
